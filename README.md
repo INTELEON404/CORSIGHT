@@ -1,7 +1,8 @@
 <div align="center">
   <img src="https://github.com/INTELEON404/Template/blob/main/corsight.png" alt="Logo" />
 </div>
-# CORSIGHT — HUNTER EDITION
+
+## CORSIGHT — HUNTER EDITION
 
 ```ascii
 █▀▀ █▀█ █▀▄ █▀▀ ▀█▀ █▀▀ █ █ ▀█▀  
