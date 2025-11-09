@@ -52,7 +52,7 @@ python3 corsight.py -i targets.txt
 **Or (one-liner):**
 
 ```bash
-python3 -c "$(curl -fsSL https://raw.githubusercontent.com/INTELEON404/CORSIGHT/main/corsight.py)" -i targets.txt -t 1000
+python3 -c "$(curl -fsSL https://raw.githubusercontent.com/INTELEON404/CORSIGHT/refs/heads/main/corsight.py)" -i targets.txt -t 1000
 ```
 
 > Note: using extreme concurrency (≥500) may require tuning system limits (ulimit) and network capacity. Lower the thread count if you see errors or network issues.
