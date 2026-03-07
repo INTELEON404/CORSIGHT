@@ -73,21 +73,6 @@ python corsight.py -i targets.txt -t 250 --subdomain-brute --validate --poc --re
 | **MEDIUM** | Origin reflection on low‑impact endpoints or paths without session cookies. |
 | **LOW** | `null` origin misconfigurations on non‑sensitive public assets. |
 
----
-
-## 🔄 CI/CD Integration
-
-CORSIGHT v4.5 ships with a ready‑to‑use GitHub Actions workflow.  
-Place [`.github/workflows/corsight-scan.yml`](/.github/workflows/corsight-scan.yml) in your repository to run automated scans on every push or on a schedule.
-
-Example workflow snippet:
-```yaml
-- name: Run CORSIGHT scan
-  run: |
-    python corsight.py -i targets.txt --json-pipe --report -o ./output
-```
-
-The full workflow file is available [here](/.github/workflows/corsight-scan.yml).
 
 ---
 
