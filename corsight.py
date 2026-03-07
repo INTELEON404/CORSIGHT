@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""                                         
+"""                                                                                      
  _____ _____ _____ _____ _____ _____ _____ _____ 
 |     |     | __  |   __|     |   __|  |  |_   _|
 |   --|  |  |    -|__   |-   -|  |  |     | | |  
 |_____|_____|__|__|_____|_____|_____|__|__| |_|  
-                                                
+                                               
 """
 
 import argparse
@@ -53,8 +53,8 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 # ---------- Configuration ----------
-DEFAULT_USER_AGENT = "CORSIGHT/4.3 (Professional Edition)"
-REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=15, connect=5)
+DEFAULT_USER_AGENT = "CORSIGHT/1.4 (Professional Edition)"
+REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=20, connect=5)
 MAX_RETRIES = 2
 RETRY_BACKOFF = 1
 DEFAULT_CONCURRENCY = 50
@@ -79,11 +79,11 @@ def show_banner() -> None:
     print(colored(r"""                                     
  _____ _____ _____ _____ _____ _____ _____ _____ 
 |     |     | __  |   __|     |   __|  |  |_   _|
-|   --|  |  |    -|__   |-   -|  |  |     | | |    CORSIGHT v1.3 
+|   --|  |  |    -|__   |-   -|  |  |     | | |   CORSIGHT v1.4 
 |_____|_____|__|__|_____|_____|_____|__|__| |_|  
     """, "cyan", attrs=["bold"]))
-    print(colored("             BE HUNT • CLAIM BOUNTY", "magenta", attrs=["bold"]))
-    print(colored("              Dev by INTELEON404", "white"))
+    print(colored("              PROFESSIONAL CORS AUDIT ENGINE", "magenta", attrs=["bold"]))
+    print(colored("               Maintainer: INTELEON404", "white"))
     print(colored("=" * 88, "grey"))
 
 # ---------- Utilities ----------
@@ -102,7 +102,6 @@ def safe_filename(s: str) -> str:
     return re.sub(r'[^\w\-_\.]', '_', s).strip('_')
 
 async def check_dns_wildcard(domain: str) -> bool:
-    """Checks for DNS wildcard records to reduce false positives in subdomain discovery."""
     random_sub = ''.join(random.choices(string.ascii_lowercase, k=15)) + "." + domain
     loop = asyncio.get_running_loop()
     try:
@@ -112,7 +111,6 @@ async def check_dns_wildcard(domain: str) -> bool:
         return False
 
 def get_severity(url: str, is_exploitable: bool, credentials_allowed: bool) -> str:
-    """Calculates severity based on path sensitivity and exploitability."""
     critical_keywords = ["admin", "auth", "login", "password", "session", "userinfo", "profile", "billing", "settings", "me", "account"]
     high_keywords = ["api", "v1", "v2", "graphql", "internal", "config", "user"]
     path = urlparse(url).path.lower()
@@ -127,33 +125,28 @@ def get_severity(url: str, is_exploitable: bool, credentials_allowed: bool) -> s
         
     return severity
 
-# ---------- AI Origin Mutation Engine (v5-Refined) ----------
+# ---------- AI Mutation Engine ----------
 def generate_origins(domain: str, include_null: bool = True) -> List[str]:
-    """Mutation engine using OWASP and advanced bypass patterns."""
     mutations = set()
     def rand_sub(): return ''.join(random.choices(string.ascii_lowercase + string.digits, k=random.randint(5, 10)))
     
-    # 1. Classic Suffix/Prefix Bypass
     mutations.add(f"https://{domain}.evil.com")
     mutations.add(f"https://{domain}.attacker.com")
     mutations.add(f"https://evil{domain}.com")
     mutations.add(f"https://{domain}-evil.com")
     mutations.add(f"https://{domain}.local")
     
-    # 2. Advanced Professional Bypass Patterns (Regex Misconfig)
     for attacker in ATTACKER_DOMAINS:
-        mutations.add(f"https://{domain}.com.{attacker}") # TLD Confusion
-        mutations.add(f"https://{attacker}/{domain}")    # Path-based
-        mutations.add(f"https://{attacker}?{domain}")    # Query-based
-        mutations.add(f"https://{attacker}@{domain}.com") # Auth bypass trick
-        mutations.add(f"https://{domain}%00.{attacker}") # Null Byte injection
+        mutations.add(f"https://{domain}.com.{attacker}")
+        mutations.add(f"https://{attacker}/{domain}")
+        mutations.add(f"https://{attacker}?{domain}")
+        mutations.add(f"https://{attacker}@{domain}.com")
+        mutations.add(f"https://{domain}%00.{attacker}")
         mutations.add(f"https://{domain}.{attacker}.{rand_sub()}.com")
     
-    # 3. Subdomain Fuzzing
     mutations.add(f"https://{rand_sub()}{domain}.com")
-    mutations.add(f"https://{domain}.attacker.co")
     
-    for _ in range(3):
+    for _ in range(2):
         mutations.add(f"https://{rand_sub()}.{domain}")
     
     if include_null:
@@ -174,16 +167,19 @@ def truncate_body_preview(body: bytes, max_len=60) -> str:
     if len(body) > max_len: preview += "..."
     return preview
 
-# ---------- Request Handling and Preflight Validation ----------
+# ---------- Core Logic ----------
 async def fetch_with_retry(
     session: aiohttp.ClientSession,
     url: str,
-    origin: str,
+    origin: Optional[str] = None,
     method: str = "GET",
     preflight: bool = False,
     insecure: bool = False,
 ) -> Optional[Tuple[int, Dict[str, str], bytes]]:
-    headers = {"Origin": origin, "User-Agent": DEFAULT_USER_AGENT}
+    headers = {"User-Agent": DEFAULT_USER_AGENT}
+    if origin:
+        headers["Origin"] = origin
+    
     if preflight:
         headers.update({
             "Access-Control-Request-Method": method,
@@ -203,45 +199,44 @@ async def fetch_with_retry(
                 body = await resp.read()
                 headers_lower = {k.lower(): v for k, v in resp.headers.items()}
                 return (resp.status, headers_lower, body)
-        except Exception:
+        except Exception as e:
             if attempt < MAX_RETRIES:
                 await asyncio.sleep(RETRY_BACKOFF * (attempt + 1))
     return None
 
-def is_vulnerable_response(status: int, headers: Dict[str, str], body: bytes, origin: str, preflight: bool = False) -> Tuple[bool, str]:
+def is_vulnerable_response(status: int, headers: Dict[str, str], body: bytes, origin: str, baseline_headers: Optional[Dict[str, str]] = None, preflight: bool = False) -> Tuple[bool, str]:
     if status not in REQUIRED_STATUS_CODES and status != 204: 
         return False, f"status {status}"
 
     acao = headers.get("access-control-allow-origin", "").strip()
     acac = headers.get("access-control-allow-credentials", "").lower()
 
-    # Browser Security Logic
-    if acao.startswith("*."):
-        return False, "Invalid wildcard origin (Browsers will block)"
-    
+    if baseline_headers:
+        b_acao = baseline_headers.get("access-control-allow-origin", "").strip()
+        b_acac = baseline_headers.get("access-control-allow-credentials", "").lower()
+        if b_acao == acao and b_acac == acac and acao != origin:
+            return False, "Static CORS policy"
+
     if acao == "*" and acac == "true":
-        return False, "Browsers block wildcard with credentials"
+        return False, "Wildcard credentials blocked by browser"
     
     if acao != origin:
-        return False, "Origin reflection failed"
+        return False, "Reflection mismatch"
 
     if acac != "true":
-        return False, "Credentials not allowed"
+        return False, "Credentials forbidden"
 
-    # Preflight (OPTIONS) specific checks
     if preflight:
         acam = headers.get("access-control-allow-methods", "").upper()
         if "GET" not in acam and "*" not in acam:
-            return False, "Method not allowed (ACAM check failed)"
+            return False, "Preflight method failure"
 
     if is_trivial_body(body) and status != 204:
-        return False, "Trivial or empty response body"
+        return False, "Empty content"
 
     return True, "Exploitable"
 
-# ---------- Advanced Browser Exploit Engine ----------
 async def browser_validate(url: str, origin: str) -> bool:
-    """Performs real cross-origin fetch simulation via a headless browser."""
     if not PLAYWRIGHT_AVAILABLE:
         return True 
 
@@ -251,7 +246,6 @@ async def browser_validate(url: str, origin: str) -> bool:
             context = await browser.new_context()
             page = await context.new_page()
 
-            # Cross-origin request simulation using Data URI
             payload = f"""
             <html><body><script>
                 (async () => {{
@@ -271,10 +265,8 @@ async def browser_validate(url: str, origin: str) -> bool:
             """
             import base64
             b64_payload = base64.b64encode(payload.encode()).decode()
-            
             await page.goto(f"data:text/html;base64,{b64_payload}")
             
-            # Wait for async fetch to finish
             start_wait = time.time()
             result = False
             while time.time() - start_wait < 5.0:
@@ -284,81 +276,67 @@ async def browser_validate(url: str, origin: str) -> bool:
                 
             await browser.close()
             return bool(result)
-    except Exception as e:
-        logger.debug(f"Browser validation failed: {e}")
+    except Exception:
         return False
 
-# ---------- Bug Bounty Report Generator ----------
-def generate_bounty_report(finding: Dict) -> str:
-    """Generates a professional bug bounty report."""
-    return f"""# {finding['severity']} - CORS Misconfiguration on {normalize_domain(finding['url'])}
+# ---------- UI & Presentation ----------
+class Spinner:
+    def __init__(self, stats):
+        self.stats = stats
+        self.chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+        self.idx = 0
+        self.active = False
+        self._task = None
 
-## 1. Summary
-A Cross-Origin Resource Sharing (CORS) misconfiguration was discovered on the endpoint `{finding['url']}`. The server dynamically reflects the `Origin` header and sets `Access-Control-Allow-Credentials: true`. This allows an attacker to perform authenticated requests from an unauthorized domain and read sensitive response data.
+    async def spin(self):
+        while self.active:
+            char = colored(self.chars[self.idx % len(self.chars)], "cyan")
+            findings_val = str(self.stats['findings_count'])
+            findings_color = "red" if self.stats['findings_count'] > 0 else "white"
+            
+            line = (
+                f"\r{colored('➜', 'blue')} {colored('Audit Phase:', 'white')} {char} "
+                f"[{colored('Requests:', 'grey')} {self.stats['requests_sent']} | "
+                f"{colored('Healthy:', 'grey')} {self.stats['requests_success']} | "
+                f"{colored('Findings:', 'grey')} {colored(findings_val, findings_color, attrs=['bold'])}]"
+            )
+            
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            self.idx += 1
+            await asyncio.sleep(0.1)
 
-## 2. Vulnerable Endpoint
-- **Target URL**: `{finding['url']}`
-- **Attacker-Controlled Origin**: `{finding['origin']}`
-- **HTTP Method**: `{finding['method']}`
-- **Severity**: **{finding['severity']}**
+    def start(self):
+        self.active = True
+        self._task = asyncio.create_task(self.spin())
 
-## 3. Impact
-An attacker can host a malicious script that, when visited by a logged-in victim, steals private information (e.g., CSRF tokens, PII, session data) from the vulnerable endpoint. This can lead to account takeover or sensitive data leakage.
+    async def stop(self):
+        self.active = False
+        if self._task:
+            try: await self._task
+            except asyncio.CancelledError: pass
+        sys.stdout.write("\r" + " " * 100 + "\r")
+        sys.stdout.flush()
 
-## 4. Proof of Concept
-Save the following as `exploit.html` and host it on `{finding['origin']}`:
+    def clear(self):
+        sys.stdout.write("\r" + " " * 100 + "\r")
+        sys.stdout.flush()
 
-```html
-<html>
-  <body>
-    <h2>CORS Exploit PoC</h2>
-    <div id="data">Waiting for response...</div>
-    <script>
-      fetch("{finding['url']}", {{
-        method: "{finding['method']}",
-        credentials: "include"
-      }})
-      .then(response => response.text())
-      .then(data => {{
-        document.getElementById('data').innerText = "Stolen Data: " + data;
-      }})
-      .catch(err => console.error("Error:", err));
-    </script>
-  </body>
-</html>
-```
-
-## 5. Evidence
-**Request:**
-```http
-{finding['method']} {urlparse(finding['url']).path} HTTP/1.1
-Host: {normalize_domain(finding['url'])}
-Origin: {finding['origin']}
-```
-
-**Response:**
-```http
-HTTP/1.1 {finding['status']} OK
-Access-Control-Allow-Origin: {finding['acao']}
-Access-Control-Allow-Credentials: {finding['acac']}
-
-{finding['body_preview']}
-```
-"""
-
-# ---------- Scanning Architecture ----------
+# ---------- Worker Logic ----------
 class ScanWorker:
-    def __init__(self, session, global_sem, domain_sems, stats, findings, args):
+    def __init__(self, session, global_sem, domain_sems, stats, findings, args, spinner):
         self.session = session
         self.global_sem = global_sem
         self.domain_sems = domain_sems
         self.stats = stats
         self.findings = findings
         self.args = args
+        self.spinner = spinner
         self.queue = asyncio.Queue(maxsize=max(args.threads * 200, 5000)) 
         self.stats_lock = asyncio.Lock()
         self.findings_lock = asyncio.Lock()
         self.seen_findings = set()
+        self.baselines = {}
 
     async def worker_loop(self):
         while True:
@@ -372,13 +350,19 @@ class ScanWorker:
 
     async def test_endpoint(self, url, origin, method, preflight):
         domain = normalize_domain(url)
-        domain_sem = self.domain_sems.get(domain)
-        if not domain_sem:
-            domain_sem = asyncio.Semaphore(DEFAULT_PER_DOMAIN_CONCURRENCY)
-            self.domain_sems[domain] = domain_sem
+        domain_sem = self.domain_sems.get(domain, asyncio.Semaphore(DEFAULT_PER_DOMAIN_CONCURRENCY))
+        self.domain_sems[domain] = domain_sem
+
+        if url not in self.baselines:
+            async with self.global_sem, domain_sem:
+                res = await fetch_with_retry(self.session, url, origin=None, method=method, preflight=False, insecure=self.args.insecure)
+                if res: self.baselines[url] = res
+
+        baseline = self.baselines.get(url)
+        baseline_headers = baseline[1] if baseline else None
 
         async with self.global_sem, domain_sem:
-            await asyncio.sleep(self.args.delay + random.uniform(0, 0.1))
+            await asyncio.sleep(self.args.delay)
             result = await fetch_with_retry(self.session, url, origin, method, preflight, self.args.insecure)
 
         async with self.stats_lock:
@@ -389,69 +373,67 @@ class ScanWorker:
             self.stats["requests_success"] += 1
 
         status, headers, body = result
-        is_vuln, reason = is_vulnerable_response(status, headers, body, origin, preflight)
+        is_vuln, reason = is_vulnerable_response(status, headers, body, origin, baseline_headers, preflight)
         if not is_vuln: return
 
-        is_exploitable = True
+        browser_ok = False
         if self.args.validate:
-            is_exploitable = await browser_validate(url, origin)
-            if not is_exploitable: return
+            browser_ok = await browser_validate(url, origin)
+            if not browser_ok: return
 
-        finding_key = (url, origin, method)
+        finding_key = (url, origin, method, preflight)
         async with self.findings_lock:
             if finding_key not in self.seen_findings:
                 self.seen_findings.add(finding_key)
-                finding = {
-                    "url": url, "origin": origin, "method": method,
-                    "status": status, "acao": headers.get("access-control-allow-origin", ""),
-                    "acac": headers.get("access-control-allow-credentials", ""),
-                    "body_length": len(body), "body_preview": truncate_body_preview(body),
-                    "severity": get_severity(url, is_exploitable, headers.get("access-control-allow-credentials", "") == "true")
-                }
-                self.findings.append(finding)
-                print(colored(f"\n[!] {finding['severity']} Vulnerability Found: {url} | Origin: {origin}", "red" if finding['severity']=="CRITICAL" else "yellow", attrs=["bold"]))
-                if self.args.beep: beep()
+                
+                acao = headers.get("access-control-allow-origin", "None")
+                acac = headers.get("access-control-allow-credentials", "False")
+                sev_label = get_severity(url, browser_ok or not self.args.validate, acac.lower() == "true")
+                is_readable = "Yes" if not is_trivial_body(body) else "No"
 
-# ---------- Subdomain Brute Fuzzing ----------
-async def brute_subdomains(domain: str) -> List[str]:
-    discovered = []
-    cprint(f"[*] Brute-forcing subdomains for: {domain}...", "cyan")
-    sub_sem = asyncio.Semaphore(30)
-    
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-        async def check(url):
-            async with sub_sem:
-                try:
-                    async with session.get(url, allow_redirects=True, ssl=False) as r:
-                        # Improved: status < 400 reduces noise
-                        if r.status < 400:
-                            discovered.append(url)
-                except: pass
-        
-        tasks = [check(f"https://{sub}.{domain}") for sub in SUBDOMAIN_WORDLIST]
-        await asyncio.gather(*tasks)
-    return list(set(discovered))
+                self.spinner.clear()
+                label_color = "red" if sev_label in ["CRITICAL", "HIGH"] else "yellow"
+                cprint(f"\n[!] FINDING: {sev_label} VULNERABILITY", label_color, attrs=["bold"])
+                print(f" {'Target URL':<12}: {url}")
+                print(f" {'Method':<12}: {method}")
+                print(f" {'Origin':<12}: {origin}")
+                print(f" {'ACAO':<12}: {acao}")
+                print(f" {'ACAC':<12}: {acac}")
+                print(f" {'Evidence':<12}: {truncate_body_preview(body)}")
+                print("-" * 50)
 
-# ---------- Scan Controller ----------
+                self.findings.append({
+                    "url": url, "origin": origin, "method": method, "preflight": preflight,
+                    "status": status, "acao": acao, "acac": acac,
+                    "body_preview": truncate_body_preview(body), "severity": sev_label,
+                    "is_readable": is_readable, 
+                    "timestamp": datetime.now().isoformat()
+                })
+                self.stats["findings_count"] = len(self.findings)
+                if self.args.beep and sev_label in ["CRITICAL", "HIGH"]: beep()
+
+# ---------- Main Controller ----------
 async def run_scanner(targets, paths, args):
-    stats = {"requests_sent": 0, "requests_failed": 0, "requests_success": 0, "domains_scanned": len(targets)}
+    stats = {"requests_sent": 0, "requests_failed": 0, "requests_success": 0, "findings_count": 0}
     findings = []
     global_sem = asyncio.Semaphore(args.threads)
     domain_sems = {}
 
-    if args.subdomain_brute:
-        extra = []
-        for t in targets: 
-            domain = normalize_domain(t)
-            if not await check_dns_wildcard(domain):
-                extra.extend(await brute_subdomains(domain))
-        targets = list(set(targets + extra))
-        stats["domains_scanned"] = len(targets)
+    headers_dict = {}
+    if args.headers:
+        for h in args.headers.split(","):
+            if ":" in h:
+                k, v = h.split(":", 1)
+                headers_dict[k.strip()] = v.strip()
 
-    async with aiohttp.ClientSession(timeout=REQUEST_TIMEOUT) as session:
-        worker_instance = ScanWorker(session, global_sem, domain_sems, stats, findings, args)
+    connector = aiohttp.TCPConnector(limit=args.threads, ttl_dns_cache=300)
+    async with aiohttp.ClientSession(connector=connector, headers=headers_dict) as session:
+        spinner = Spinner(stats)
+        spinner.start()
+        
+        worker = ScanWorker(session, global_sem, domain_sems, stats, findings, args, spinner)
         num_workers = min(args.threads, 40)
-        workers = [asyncio.create_task(worker_instance.worker_loop()) for _ in range(num_workers)]
+        workers = [asyncio.create_task(worker.worker_loop()) for _ in range(num_workers)]
 
         for target in targets:
             if not target.startswith("http"): target = "https://" + target
@@ -462,34 +444,34 @@ async def run_scanner(targets, paths, args):
             for path in paths:
                 url = urljoin(target, path.lstrip("/"))
                 for origin in origins:
-                    # Test standard GET and Preflight OPTIONS
-                    await worker_instance.queue.put((url, origin, "GET", False))
-                    await worker_instance.queue.put((url, origin, "GET", True))
+                    await worker.queue.put((url, origin, "GET", False))
+                    await worker.queue.put((url, origin, "GET", True))
 
-        await worker_instance.queue.join()
-        for _ in range(num_workers): await worker_instance.queue.put(None)
+        await worker.queue.join()
+        for _ in range(num_workers): await worker.queue.put(None)
         await asyncio.gather(*workers)
+        await spinner.stop()
 
     return findings, stats
 
-# ---------- Main Execution ----------
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="CORSIGHT v4.3 - Professional CORS Scanner")
+    parser = argparse.ArgumentParser(description="CORSIGHT Professional v4.5")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-u", "--url", help="Single target URL")
-    group.add_argument("-i", "--input", help="URL list input file")
-    parser.add_argument("-p", "--paths", default="/,/api,/v1,/userinfo,/graphql,/me,/account,/session,/settings,/profile,/api/user,/api/auth,/api/profile,/api/session,/config,/admin", help="Comma-separated path list")
-    parser.add_argument("-t", "--threads", type=int, default=50, help="Concurrency level")
-    parser.add_argument("-d", "--delay", type=float, default=0.05, help="Request delay")
-    parser.add_argument("--max-origins", type=int, help="Limit mutations per domain")
-    parser.add_argument("--insecure", action="store_true", help="Skip SSL verification")
-    parser.add_argument("--no-null-origin", action="store_true", help="Exclude 'null' origin")
-    parser.add_argument("--validate", action="store_true", help="Enable browser validation")
-    parser.add_argument("--subdomain-brute", action="store_true", help="Enable subdomain brute-forcing")
-    parser.add_argument("--poc", action="store_true", help="Generate PoC files")
-    parser.add_argument("--report", action="store_true", help="Generate Markdown reports")
-    parser.add_argument("--beep", action="store_true", help="Sound alert on finding")
-    parser.add_argument("--output", help="Output directory name")
+    group.add_argument("-u", "--url", help="Target URL")
+    group.add_argument("-i", "--input", help="Target list")
+    parser.add_argument("-p", "--paths", default="/,/api,/v1,/userinfo,/account", help="Audit paths")
+    parser.add_argument("-t", "--threads", type=int, default=50)
+    parser.add_argument("-d", "--delay", type=float, default=0.0)
+    parser.add_argument("-H", "--headers", help="Custom headers (Key:Value,Key:Value)")
+    parser.add_argument("--cookies", help="Auth cookies")
+    parser.add_argument("--max-origins", type=int)
+    parser.add_argument("--insecure", action="store_true")
+    parser.add_argument("--no-null-origin", action="store_true")
+    parser.add_argument("--validate", action="store_true")
+    parser.add_argument("--report", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--beep", action="store_true")
+    parser.add_argument("--output", help="Output dir")
     args = parser.parse_args()
 
     show_banner()
@@ -497,47 +479,29 @@ async def main() -> None:
     else:
         try:
             with open(args.input) as f: targets = [l.strip() for l in f if l.strip()]
-        except FileNotFoundError:
-            cprint(f"[!] Error: File '{args.input}' not found.", "red")
-            return
+        except: return print(colored("[!] Target file error", "red"))
 
     paths = [p.strip() for p in args.paths.split(",")]
     start_time = time.time()
-    
     findings, stats = await run_scanner(targets, paths, args)
     
+    # Final Summary Table
     duration = time.time() - start_time
-    rps = stats["requests_sent"] / duration if duration > 0 else 0
-    success_rate = (stats["requests_success"] / stats["requests_sent"] * 100) if stats["requests_sent"] > 0 else 0
+    print(colored("\n" + "="*30 + " AUDIT SUMMARY " + "="*30, "cyan"))
+    print(f" {'Metric':<25} | {'Value':<10}")
+    print("-" * 40)
+    print(f" {'Audit Duration':<25} | {duration:.2f}s")
+    print(f" {'Total Requests':<25} | {stats['requests_sent']}")
+    print(f" {'Vulnerabilities':<25} | {len(findings)}")
+    print("-" * 40)
     
-    cprint(f"\n[+] Scan finished in {duration:.2f} seconds.", "cyan", attrs=["bold"])
-    print(f"    Domains Scanned      : {stats['domains_scanned']}")
-    print(f"    Requests Sent        : {stats['requests_sent']}")
-    print(f"    Requests Per Second  : {rps:.2f}")
-    print(f"    Success Rate         : {success_rate:.2f}%")
-    print(f"    Vulnerabilities Found: {len(findings)}")
-
     if findings:
-        out_dir = args.output or f"corsight_results_{datetime.now().strftime('%m%d_%H%M%S')}"
+        out_dir = args.output or f"results_{datetime.now().strftime('%m%d_%H%M')}"
         os.makedirs(out_dir, exist_ok=True)
-        for idx, f in enumerate(findings):
-            tag = safe_filename(normalize_domain(f['url']))
-            
-            # Save PoC
-            if args.poc:
-                with open(os.path.join(out_dir, f"poc_{idx}_{tag}.html"), "w") as pf:
-                    pf.write(f"<!-- Vulnerable URL: {f['url']} -->\n")
-                    pf.write(f"<html><body><script>fetch('{f['url']}',{{credentials:'include'}}).then(r=>r.text()).then(d=>alert('Data Stolen from {tag}: '+d))</script></body></html>")
-            
-            # Save Report
-            if args.report:
-                with open(os.path.join(out_dir, f"report_{idx}_{tag}.md"), "w") as rf:
-                    rf.write(generate_bounty_report(f))
-                    
-        cprint(f"[+] All files saved to directory: {out_dir}", "green")
+        if args.json:
+            with open(os.path.join(out_dir, "report.json"), "w") as f: json.dump(findings, f, indent=4)
+        cprint(f"[+] Detailed findings exported to: {out_dir}", "green")
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        cprint("\n[!] Scan stopped by user.", "yellow")
+    try: asyncio.run(main())
+    except KeyboardInterrupt: cprint("\n[!] Audit interrupted.", "yellow")
