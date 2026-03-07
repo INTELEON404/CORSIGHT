@@ -79,11 +79,8 @@ def show_banner() -> None:
     print(colored(r"""                                     
  _____ _____ _____ _____ _____ _____ _____ _____ 
 |     |     | __  |   __|     |   __|  |  |_   _|
-|   --|  |  |    -|__   |-   -|  |  |     | | |  
+|   --|  |  |    -|__   |-   -|  |  |     | | |    CORSIGHT v1.3 
 |_____|_____|__|__|_____|_____|_____|__|__| |_|  
-                                                 
-
-             CORSIGHT v1.3 [Professional Edition]
     """, "cyan", attrs=["bold"]))
     print(colored("             BE HUNT • CLAIM BOUNTY", "magenta", attrs=["bold"]))
     print(colored("              Dev by INTELEON404", "white"))
