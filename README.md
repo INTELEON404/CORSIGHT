@@ -1,156 +1,103 @@
+
+# <div align="center">CORSIGHT — PROFESSIONAL EDITION v1.3</div>
+
 <div align="center">
-  <img src="https://github.com/INTELEON404/Template/blob/main/corsight.png" alt="Logo" />
+  <img src="https://github.com/INTELEON404/Template/blob/main/corsight.png" alt="CORSIGHT Logo" width="600px" />
 </div>
 
-## CORSIGHT — HUNTER EDITION
-
-```ascii
-█▀▀ █▀█ █▀▄ █▀▀ ▀█▀ █▀▀ █ █ ▀█▀  
-█░░ █░█ █▀▄ ▀▀█ ░█░ █░█ █▀█ ░█░
-▀▀▀ ▀▀▀ ▀░▀ ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀ ░▀░
+```ascii                                            
+ _____ _____ _____ _____ _____ _____ _____ _____ 
+|     |     | __  |   __|     |   __|  |  |_   _|
+|   --|  |  |    -|__   |-   -|  |  |     | | |  
+|_____|_____|__|__|_____|_____|_____|__|__| |_|  
+                                                 
 ```
+
+**CORSIGHT v4.5** is a high‑performance, asynchronous CORS misconfiguration scanner built for the **2026 offensive security landscape**. It combines AI‑driven origin mutation with real browser validation to uncover exploitable flaws that traditional scanners miss.
+
+> [!IMPORTANT]
+> **Ethical Use Only:** This tool is for authorized security testing only. Unauthorized use may violate the Computer Fraud and Abuse Act (CFAA) and other applicable laws.
 
 ---
 
-### One Command. Focused Recon.
+## ✨ What’s New in v1.3
+
+- **🛡️ SameSite Contextual Testing** – Evaluates `SameSite=Lax` and `Strict` cookie attributes to determine real‑world exploitability.
+- **🤖 AI Mutation 2.0** – Leverages local LLM patterns to generate sophisticated “look‑alike” origins (e.g., `target-api.com.attacker.sh`).
+- **⚙️ CI/CD Integration** – New `--json-pipe` mode for seamless automation in GitHub Actions, Jenkins, and other pipelines.
+- **🌐 Headless Playwright Pro** – Validates vulnerabilities in modern SPAs and React‑based authenticated states.
+- **📡 Stealth Mode** – Adaptive request delays (`--adaptive-delay`) and randomized fingerprints to bypass rate limiting and WAFs.
+
+---
+
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
-python3 corsight.py -i targets.txt -t 500 -o konghq_hunt
+git clone https://github.com/INTELEON404/CORSIGHT.git
+cd CORSIGHT
+pip install -r requirements.txt
+playwright install chromium    
 ```
 
-**That's it.**
-
----
-
-### Summary
-
-CORSIGHT is a high-performance CORS misconfiguration scanner built for pentesters and security researchers. It probes Access-Control headers across many origins and paths, scores findings, and saves machine-friendly reports. Use only on targets you have explicit permission to test.
-
----
-
-### Features (CLI MODE)
-
-* Fast, asynchronous scanning optimized for high concurrency
-* Smart origin generation (including subdomain-origin permutations)
-* Severity scoring (INFO / LOW / MEDIUM / HIGH)
-* Real-time progress bar and summary output
-* JSON + clean TXT export
-* Options tuned for Kali, Termux, Linux, macOS
-* Configurable concurrency (use responsibly)
-
-> **Security & ethics:** Always have written authorization before scanning third-party domains. Scanning at very high concurrency can affect target availability and may be detected by defensive systems.
-
----
-
-### Install & Run
+### One‑Liner Auto‑Pilot Scan
 
 ```bash
-git clone https://github.com/INTELEON404/CORSIGHT.git && cd CORSIGHT
-python3 corsight.py -i targets.txt
-```
-
-**Or (one-liner):**
-
-```bash
-python3 -c "$(curl -fsSL https://raw.githubusercontent.com/INTELEON404/CORSIGHT/refs/heads/main/corsight.py)" -i targets.txt -t 1000
-```
-
-> Note: using extreme concurrency (≥500) may require tuning system limits (ulimit) and network capacity. Lower the thread count if you see errors or network issues.
-
----
-
-### CLI Options
-
-```
--i, --input     targets file (required)
--u, --url       single target (example: https://example.com)
--p, --paths     comma-separated paths to test (default: /,/api,/v1,/graphql,/admin)
--t, --threads   concurrency (default: 200, max: 1000)
--o, --output    output prefix (e.g. -o kong -> kong.json + kong.txt)
---origins       custom comma-separated origins to test (overrides defaults)
---timeout       request timeout seconds (default: 15)
---preflight     include OPTIONS preflight checks (optional)
+python corsight.py -i targets.txt -t 250 --subdomain-brute --validate --poc --report -o 2026_recon
 ```
 
 ---
 
-### Examples
+## ⚙️ Core CLI Options
 
-```bash
-# Normal hunt
-python3 corsight.py -i domains.txt
+| Option | Description |
+|--------|-------------|
+| `--subdomain-brute` | Discover hidden subdomains before scanning. |
+| `--samesite-check` | Validate SameSite cookie protections. |
+| `--validate` | Confirm vulnerabilities via a real browser “mock exploit”. |
+| `--poc` | Generate a standalone `.html` proof‑of‑concept. |
+| `--report` | Output a formatted `.md` report (Bugcrowd/HackerOne ready). |
+| `--json-pipe` | Emit JSON for CI/CD integration. |
 
-# Higher concurrency
-python3 corsight.py -i biglist.txt -t 400
-
-# Kong HQ special
-python3 corsight.py -i konghq.txt -t 600 -o KONGHQ_JACKPOT_2025
-```
+> **Advanced users:** Additional flags like `--stealth`, `--adaptive-delay`, and concurrency control (`-t`) are available – run `python corsight.py -h` for the full list.
 
 ---
 
-### Output Example
+## 📊 2026 Severity Matrix
 
+| Severity | Attack Scenario |
+|----------|------------------|
+| **CRITICAL** | Sensitive data access (e.g., `/api/user/token`) with `Credentials: true` and browser validation. |
+| **HIGH** | Reflection on subdomains leading to PII exposure. |
+| **MEDIUM** | Origin reflection on low‑impact endpoints or paths without session cookies. |
+| **LOW** | `null` origin misconfigurations on non‑sensitive public assets. |
+
+---
+
+## 🔄 CI/CD Integration
+
+CORSIGHT v4.5 ships with a ready‑to‑use GitHub Actions workflow.  
+Place [`.github/workflows/corsight-scan.yml`](/.github/workflows/corsight-scan.yml) in your repository to run automated scans on every push or on a schedule.
+
+Example workflow snippet:
 ```yaml
-JACKPOT! CORS VULN!
-  url     → https://2293a63582c1.us.portal.konghq.tech/api
-  origin  → https://abc123xyz.konghq.tech
-  ACAO    → https://abc123xyz.konghq.tech
-  ACAC    → true
-  HIGH    → EXPLOITABLE!
+- name: Run CORSIGHT scan
+  run: |
+    python corsight.py -i targets.txt --json-pipe --report -o ./output
 ```
 
-Files created:
-
-```
-KONGHQ_JACKPOT_2025.json
-KONGHQ_JACKPOT_2025.txt
-```
+The full workflow file is available [here](/.github/workflows/corsight-scan.yml).
 
 ---
 
-### Pro Tips
+## 👤 Author & Support
 
-```bash
-# Aggregate lists then scan
-find . -name "*.txt" -exec cat {} + | sort -u > all.txt
-python3 corsight.py -i all.txt -t 350 -o FULL_HUNT
+**INTELEON404** – Offensive Security Researcher
 
-# Auto-recon + scan
-subfinder -dL domains.txt -all -o subs.txt
-python3 corsight.py -i subs.txt -t 300
-```
+- GitHub: [@INTELEON404](https://github.com/INTELEON404)
+- X (Twitter): [@INTELEON404](https://twitter.com/INTELEON404)
 
-* Start with moderate concurrency (50–200) and scale up gradually.
-* If you get many network errors, reduce threads or increase timeout.
-* Consider adding `--preflight` to test server responses to OPTIONS when relevant.
+Distributed under the **MIT License**.
 
----
-
-### Changelog (v1.0)
-
-* Initial public release: async scanner, scoring, JSON/TXT export, progress bar.
-* Hunter Edition tweaks: smarter origin generation and speed optimizations.
-
----
-
-### License
-
-MIT — see LICENSE file in repo.
-
----
-
-### Author
-
-**INTELEON404** — THE PENTESTER • BUG HUNTER
-
-> "Real hackers don't click. They type."
-
-**GitHub:** github.com/INTELEON404
-**X:** @INTELEON404
-
----
-
-### Responsible Use
-
-This tool is for authorized security testing and research. Do not use CORSIGHT to target systems without permission. The author and distributors are not responsible for misuse.
+> *“Automate the recon, focus on the exploit.”*
